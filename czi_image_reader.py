@@ -12,12 +12,14 @@ import os
 
 import cv2
 import psutil
+from matplotlib import pyplot as plt
 from pylibCZIrw import czi as pyczi
 
-from plotting_utils import plot_single_image_with_legend
+from cell_detector import contains_cells
+from plotting_utils import plot_single_czi_image_with_legend
 
 
-def slice_czi_image(file_path, output_dim=(1200, 1600)) -> dict:
+def slice_czi_image_info(file_path, output_dim=(1200, 1600), plot=False) -> dict:  # noqa: E501
     """
     Slice a CZI image into smaller images
 
@@ -89,12 +91,7 @@ def process_and_save_single_image_to_format(slices_info, file_path, slice_index,
     cv2.imwrite(filename=output_path, img=slice_img)
     print(f'Processing: {new_filename}')
     if plot:
-        plot_single_image_with_legend(
-            file_path=file_path,
-            slice_index=slice_index,
-            scene_index=scene_index,
-            slices_info=slices_info
-            )
+        plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
 
 
 def process_and_save_all_images(slices_info, file_path, output_dir) -> None:
@@ -120,9 +117,9 @@ def process_and_save_all_images(slices_info, file_path, output_dir) -> None:
                 output_dir=output_dir)
 
 
-def find_max_slice_size_to_memory(file_path, start_dim=(100, 100), step=100, max_mem_usage=80):
+def find_max_slice_size_to_memory(file_path, start_dim=(100, 100), step=100, max_mem_usage=80):  # noqa: E501
     """
-    Find the maximum slice size that can be used without exceeding the maximum memory usage.
+    Find the maximum slice size that can be used without exceeding the maximum memory usage.  # noqa: E501
 
     Parameters
     ----------
@@ -155,17 +152,53 @@ def find_max_slice_size_to_memory(file_path, start_dim=(100, 100), step=100, max
             num_slices_width = width // max_slice_size[0]
             num_slices_height = height // max_slice_size[1]
             num_slices = num_slices_width * num_slices_height
-            mem_usage = num_slices * max_slice_size[0] * max_slice_size[1] * 3  # 3 bytes per pixel
+            mem_usage = num_slices * \
+                max_slice_size[0] * max_slice_size[1] * 3  # 3 bytes per pixel
 
             # Adjust the slice size until the memory usage is within the limit
             while mem_usage > max_mem_bytes:
-                max_slice_size = (max_slice_size[0] + step, max_slice_size[1] + step)
+                max_slice_size = (max_slice_size[0] + step, max_slice_size[1] + step)  # noqa: E501
                 num_slices_width = width // max_slice_size[0]
                 num_slices_height = height // max_slice_size[1]
                 num_slices = num_slices_width * num_slices_height
-                mem_usage = num_slices * max_slice_size[0] * max_slice_size[1] * 3
+                mem_usage = num_slices * \
+                    max_slice_size[0] * max_slice_size[1] * \
+                    3  # 3 bytes per pixel
 
     return max_slice_size
+
+
+def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, plot=True) -> None:  # noqa: E501
+    """
+    Detect cells in a single slice
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the CZI file
+    slice_index : int
+        Index of the slice to be processed
+    scene_index : int
+        Index of the scene to be processed
+    slices_info : dict
+        Dictionary containing the slices information
+    plot : bool
+        Whether to plot the results
+
+    Returns
+    -------
+    list
+        List containing the detected cells
+    """
+    current_slice = slices_info[f'scene_{scene_index}'][slice_index]
+    roi = current_slice['roi']
+    with pyczi.open_czi(filepath=file_path) as czidoc:
+        slice_img = czidoc.read(roi=roi, plane={'C': 0}, pixel_type='Bgr24')
+    cells = contains_cells(image=slice_img, display=False)
+    print(f'{"contains cells" if cells else "does not contain cells"}')  # noqa: E501
+    if plot and cells:
+        plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
+    return cells
 
 
 if __name__ == "__main__":
@@ -176,16 +209,24 @@ if __name__ == "__main__":
     # slices_info = slice_czi_image(file_path=file_path, output_dim=(4096, 4096))  # funciona  # noqa: E501
 
     # max = 152700
-    x_dim = 18700
-    y_dim = 18700
+    x_dim = 2000
+    y_dim = 2000
 
     print(f'x_dim: {x_dim}, y_dim: {y_dim} chosen manually')
 
-    slices_info = slice_czi_image(file_path=file_path, output_dim=(x_dim, y_dim))  # noqa: E501
+    slices_info = slice_czi_image_info(file_path=file_path, output_dim=(x_dim, y_dim), plot=True)  # noqa: E501
     n_samples = sum([len(slices) for slices in slices_info.values()])
     print(f'Number of samples: {n_samples}')
 
-    format = 'png'
+    for sample in range(n_samples):
+        detect_cell_in_czi_slice(file_path=file_path, slice_index=sample, scene_index=0, slices_info=slices_info, plot=True)  # noqa: E501
+        # TODO: save info about all cells and their positions
+        # TODO: Return: dictionary with cell info
+        # TODO: csv file with cell info
+    # detect_cell_in_czi_slice(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info, plot=False)  # noqa: E501
+    # plot_single_czi_image_with_legend(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info)  # noqa: E501
+
+    # format = 'png'
 
     # process_and_save_single_image_to_format(
     #     slices_info=slices_info,

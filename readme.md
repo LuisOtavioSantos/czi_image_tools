@@ -1,3 +1,4 @@
+<h3> This is a cell detector Project to detect and slice super resolution images </h3>
 <h3> This is a project built over pylibCZIrw lib to read and write high resolution CZI images </h3>
 <h3> Requirements to run this project </h3>
 
