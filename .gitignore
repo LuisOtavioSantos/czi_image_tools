@@ -1,0 +1,13 @@
+venv
+images_output
+/venv
+# png files
+*.png
+# jpg files
+**/*.jpg
+# jpeg files
+*.jpeg
+# gif files
+*.gif
+# png in subdirectories
+**/*.png
