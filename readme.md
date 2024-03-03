@@ -1,6 +1,12 @@
 <h3> This is a cell detector Project to detect and slice super resolution images </h3>
 <h3> This is a project built over pylibCZIrw lib to read and write high resolution CZI images </h3>
-<h3> Requirements to run this project </h3>
+<h3> Installation of this project </h3>
+<h3> Using poetry </h3>
+
+
+```sh
+python3 -m venv venv
+```
 
 <h4> Create a virtual enviroment </h4>
 

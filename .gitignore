@@ -1,6 +1,6 @@
 venv
 images_output
-/venv
+**/venv
 # png files
 *.png
 # jpg files
@@ -11,3 +11,10 @@ images_output
 *.gif
 # png in subdirectories
 **/*.png
+
+# temp python files
+*.pyc
+*.pyo
+
+# project temp files
+_temp.py
