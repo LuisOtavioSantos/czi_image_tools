@@ -8,12 +8,12 @@ Open a czi file and read the slides.
 
 # from .plotting_utils import plot_czi_slices
 
+import glob
 import os
 
 import cv2
 import psutil
 from cell_detector import contains_cells
-from matplotlib import pyplot as plt
 from plotting_utils import plot_single_czi_image_with_legend
 from pylibCZIrw import czi as pyczi
 
@@ -93,29 +93,6 @@ def process_and_save_single_image_to_format(slices_info, file_path, slice_index,
         plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
 
 
-def process_and_save_all_images(slices_info, file_path, output_dir) -> None:
-    """
-    Process and save all images
-
-    Parameters
-    ----------
-    slices_info : dict
-        Dictionary containing the slices information
-    file_path : str
-        Path to the CZI file
-    output_dir : str
-        Output directory
-    """
-    for scene_index, scene_slices in slices_info.items():
-        for slice_index, slice_info in enumerate(iterable=scene_slices):
-            process_and_save_single_image_to_format(
-                slices_info=slices_info,
-                file_path=file_path,
-                slice_index=slice_index,
-                scene_index=scene_index,
-                output_dir=output_dir)
-
-
 def find_max_slice_size_to_memory(file_path, start_dim=(100, 100), step=100, max_mem_usage=80):  # noqa: E501
     """
     Find the maximum slice size that can be used without exceeding the maximum memory usage.  # noqa: E501
@@ -167,7 +144,29 @@ def find_max_slice_size_to_memory(file_path, start_dim=(100, 100), step=100, max
     return max_slice_size
 
 
-def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output, plot=True) -> None:  # noqa: E501
+def list_files_by_extension(directory: str, extension: str) -> tuple:
+    """
+    List all files with a given extension in a directory.
+
+    Parameters:
+    - directory (str): The directory path.
+    - extension (str): The file extension to look for.
+
+    Returns:
+    - tuple: A tuple containing the list of files and the count of files.
+    """
+    if not os.path.exists(path=directory):
+        raise ValueError(f"The directory {directory} does not exist.")
+
+    files_list = glob.glob(pathname=os.path.join(directory, "*." + extension))
+    files_list.sort()
+
+    file_count = len(files_list)
+
+    return files_list, file_count
+
+
+def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output='images_output', plot=True, format='png', create=True) -> None:  # noqa: E501
     """
     Detect cells in a single slice
 
@@ -183,6 +182,10 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
         Dictionary containing the slices information
     plot : bool
         Whether to plot the results
+    format : str
+        Output format (e.g., 'png', 'jpg')
+    create : bool
+        Whether to create a separate folder for each czi file
 
     Returns
     -------
@@ -197,15 +200,95 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
     print(f'{"contains cells" if cells else "does not contain cells"}')  # noqa: E501
     if plot and cells:
         plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
-    elif cells:
-        print('save image')
+    if cells:
+        print('saving image')
         file_name = os.path.basename(file_path).split('.')[0]
-        new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}_cells.png'
-        output_path = os.path.join('images_output', new_filename)
+        new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{format}'  # noqa: E501
+        if create:
+            output_folder = os.path.join(
+                output, new_filename.replace('.png', ''))
+            output_path = os.path.join(output_folder, new_filename)
+            create_folder_if_not_exists(folder_path=output_folder)
+        else:
+            output_path = os.path.join(output, new_filename)
         print(f'output_path: {output_path}')
         cv2.imwrite(filename=output_path, img=slice_img)
 
     return cells
+
+
+def create_folder_if_not_exists(folder_path: str) -> None:
+    """
+    Create a folder if it does not exist.
+
+    Parameters:
+    - folder_path (str): The path to the folder.
+
+    Returns:
+    - None
+    """
+    if not os.path.exists(path=folder_path):
+        os.makedirs(name=folder_path)
+
+
+def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), format='png', create_folder=True) -> None:  # noqa: E501
+    """
+    Process all czi files in a folder.
+
+    Parameters:
+    - folder_path (str): Path to the folder containing the czi files.
+    - output_dir (str): Path to the output directory.
+    - output_dim (tuple): Dimensions of the output images (width, height).
+    - format (str): Output format (e.g., 'png', 'jpg').
+    - create_folder (bool): Whether to create a separate folder for each czi file.  # noqa: E501
+    """
+    czi_files, _ = list_files_by_extension(
+        directory=folder_path, extension='czi')
+
+    create = input(__prompt='Create a folder for each patient? y/n: ')
+    create = string_input_to_boolean(string=create)
+
+    for czi_file in czi_files:
+        print(f'Processing file: {czi_file}')
+        slices_info = slice_czi_image_info(
+            file_path=czi_file, output_dim=output_dim)
+
+        file_name = os.path.basename(czi_file).split('.')[0]
+        file_output_dir = os.path.join(
+            output_dir, file_name) if create_folder else output_dir
+
+        if create_folder:
+            os.makedirs(file_output_dir, exist_ok=True)
+
+        for scene, slices in slices_info.items():
+            for slice_index, slice_info in enumerate(iterable=slices):
+                detect_cell_in_czi_slice(
+                    file_path=czi_file,
+                    slice_index=slice_index,
+                    scene_index=int(scene.split('_')[-1]),
+                    slices_info=slices_info,
+                    output=file_output_dir,
+                    format=format,
+                    create=create
+                )
+
+
+def string_input_to_boolean(string: str) -> bool:
+    """
+    Convert a string input to a boolean value.
+
+    Parameters:
+    - string (str): The input string.
+
+    Returns:
+    - bool: The boolean value.
+    """
+    if string.lower() in ['y', 'yes', 'true']:
+        return True
+    elif string.lower() in ['n', 'no', 'false']:
+        return False
+    else:
+        raise ValueError(f'Invalid input: {string}')
 
 
 if __name__ == "__main__":
@@ -225,9 +308,11 @@ if __name__ == "__main__":
     n_samples = sum([len(slices) for slices in slices_info.values()])
     print(f'Number of samples: {n_samples}')
     output = 'images_output'
-    for sample in range(n_samples):
-        detect_cell_in_czi_slice(file_path=file_path, slice_index=sample, scene_index=0, slices_info=slices_info, output=output, plot=True)  # noqa: E501
-        break
+    print(f'Output directory: {output}')
+    print(f'{"Exists" if os.path.exists(path=output) else "Does not exist"}')
+    # quit()
+    for sample_index in range(n_samples):
+        detect_cell_in_czi_slice(file_path=file_path, slice_index=sample_index, scene_index=0, slices_info=slices_info, output=output, plot=True)  # noqa: E501
     # detect_cell_in_czi_slice(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info, plot=False)  # noqa: E501
     # plot_single_czi_image_with_legend(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info)  # noqa: E501
 

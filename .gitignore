@@ -11,6 +11,8 @@ images_output
 *.gif
 # png in subdirectories
 **/*.png
+# jpg in subdirectories
+**/*.jpg
 
 # temp python files
 *.pyc
