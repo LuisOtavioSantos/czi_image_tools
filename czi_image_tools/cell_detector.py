@@ -1,4 +1,5 @@
 """
+cell_detector.py
 Many functions to detect cells in an image
 """
 from collections import Counter

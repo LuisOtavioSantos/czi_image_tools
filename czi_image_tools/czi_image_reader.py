@@ -10,12 +10,24 @@ Open a czi file and read the slides.
 
 import glob
 import os
+import platform
 
 import cv2
 import psutil
-from cell_detector import contains_cells
-from plotting_utils import plot_single_czi_image_with_legend
 from pylibCZIrw import czi as pyczi
+
+from .cell_detector import contains_cells
+from .plotting_utils import plot_single_czi_image_with_legend
+
+
+def clear() -> None:
+    """
+    Limpa a tela do terminal independente do sistema operacional
+    """
+    if platform.system() == "Windows":
+        os.system(command="cls")
+    else:
+        os.system(command="clear")
 
 
 def slice_czi_image_info(file_path, output_dim=(1200, 1600), plot=False) -> dict:  # noqa: E501
@@ -198,24 +210,30 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
     if create:
         file_name = os.path.basename(p=file_path).split('.')[0]
         new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{format}'  # noqa: E501
-        output_folder = os.path.join(output, new_filename.replace('.png', ''))
+        output_folder = os.path.join(output, file_name.replace('.png', ''))
         output_path = os.path.join(output_folder, new_filename)
-        create_folder_if_not_exists(folder_path=output_folder)
     else:
         output_path = os.path.join(output, new_filename)
 
-    if os.path.exists(path=output_path):
+    if not os.path.exists(path=output_path):
         with pyczi.open_czi(filepath=file_path) as czidoc:
             slice_img = czidoc.read(
                 roi=roi, plane={'C': 0}, pixel_type='Bgr24')
         cells = contains_cells(image=slice_img, display=False)
-        print(f'{"contains cells" if cells else "does not contain cells"}')  # noqa: E501
+        clear()
+        print(f'slice {slice_index+1} - {"contains cells" if cells else "does not contain cells"}')  # noqa: E501
         if plot and cells:
             plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
-        if cells:
+        if cells and create:
             print('saving image')
             print(f'output_path: {output_path}')
+            print(f'output_folder: {output_folder}')
+            create_folder_if_not_exists(folder_path=output_folder)
             cv2.imwrite(filename=output_path, img=slice_img)
+        if cells and not create:
+            print('saving image')
+            cv2.imwrite(filename=output_path, img=slice_img)
+
     else:
         print(f'File {output_path} already exists')
 
@@ -316,6 +334,8 @@ if __name__ == "__main__":
     # quit()
     for sample_index in range(n_samples):
         detect_cell_in_czi_slice(file_path=file_path, slice_index=sample_index, scene_index=0, slices_info=slices_info, output=output, plot=True)  # noqa: E501
+        if sample_index > 150:
+            quit()
     # detect_cell_in_czi_slice(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info, plot=False)  # noqa: E501
     # plot_single_czi_image_with_legend(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info)  # noqa: E501
 
