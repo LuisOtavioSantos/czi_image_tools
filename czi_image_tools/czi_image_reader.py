@@ -30,7 +30,7 @@ def clear() -> None:
         os.system(command="clear")
 
 
-def slice_czi_image_info(file_path, output_dim=(1200, 1600), plot=False) -> dict:  # noqa: E501
+def slice_czi_image_info(file_path, output_dim=(1600, 1200), plot=False) -> dict:  # noqa: E501
     """
     Slice a CZI image into smaller images
 
@@ -219,7 +219,11 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
         with pyczi.open_czi(filepath=file_path) as czidoc:
             slice_img = czidoc.read(
                 roi=roi, plane={'C': 0}, pixel_type='Bgr24')
-        cells = contains_cells(image=slice_img, display=False)
+        cells = contains_cells(
+            image=slice_img,
+            display=False,
+            threshold_ratio=0.01
+        )
         clear()
         print(f'slice {slice_index+1} - {"contains cells" if cells else "does not contain cells"}')  # noqa: E501
         if plot and cells:
@@ -266,7 +270,7 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), format=
     czi_files, _ = list_files_by_extension(
         directory=folder_path, extension='czi')
 
-    create = input(__prompt='Create a folder for each patient? y/n: ')
+    create = input('Create a folder for each patient? y/n: ')
     create = string_input_to_boolean(string=create)
 
     for czi_file in czi_files:

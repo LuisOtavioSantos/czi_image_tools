@@ -309,13 +309,14 @@ def filter_lines(lines: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return filtered_vertical_lines, filtered_horizontal_lines
 
 
-def contains_cells(image: np.ndarray, display: bool = False) -> bool:
+def contains_cells(image: np.ndarray, display: bool = False, threshold_ratio=0.01) -> bool:  # noqa: E501
     """
     Checks if an image contains cells based on color thresholding.
 
     Parameters:
     - image: The original image.
     - display: Whether to display the masked image.
+    - threshold_ratio: The threshold ratio of masked area to the total area.
 
     Returns:
     - True if cells are present, False otherwise.
@@ -334,9 +335,6 @@ def contains_cells(image: np.ndarray, display: bool = False) -> bool:
     area = mask.shape[0] * mask.shape[1]
     masked_area = np.sum(a=mask == 255)
     ratio = masked_area / area
-
-    # Set a threshold ratio to determine if cells are present
-    threshold_ratio = 0.01  # You may adjust this based on your specific case
 
     if display:
         if ratio > threshold_ratio:
@@ -577,3 +575,11 @@ def segment_image(image_path, display=False):
         segments)
     sample_cropped_images = [proportional_crop(img) for img in common_segments]
     return sample_cropped_images
+
+
+if __name__ == "__main__":
+    import os
+    image_path = "images_output/2019_12_09__09_49__0001/2019_12_09__09_49__0001"
+    files = os.listdir(image_path)
+    image = cv2.imread(os.path.join(image_path, files[0]))
+    contains_cells(image=image, display=True)

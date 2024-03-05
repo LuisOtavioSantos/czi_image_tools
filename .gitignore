@@ -20,3 +20,5 @@ images_output
 
 # project temp files
 _temp.py
+main.py
+**/*main.py
