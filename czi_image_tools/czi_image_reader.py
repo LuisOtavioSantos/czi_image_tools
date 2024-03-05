@@ -194,27 +194,30 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
     """
     current_slice = slices_info[f'scene_{scene_index}'][slice_index]
     roi = current_slice['roi']
-    with pyczi.open_czi(filepath=file_path) as czidoc:
-        slice_img = czidoc.read(roi=roi, plane={'C': 0}, pixel_type='Bgr24')
-    cells = contains_cells(image=slice_img, display=False)
-    print(f'{"contains cells" if cells else "does not contain cells"}')  # noqa: E501
-    if plot and cells:
-        plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
-    if cells:
-        print('saving image')
-        file_name = os.path.basename(file_path).split('.')[0]
-        new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{format}'  # noqa: E501
-        if create:
-            output_folder = os.path.join(
-                output, new_filename.replace('.png', ''))
-            output_path = os.path.join(output_folder, new_filename)
-            create_folder_if_not_exists(folder_path=output_folder)
-        else:
-            output_path = os.path.join(output, new_filename)
-        print(f'output_path: {output_path}')
-        cv2.imwrite(filename=output_path, img=slice_img)
 
-    return cells
+    if create:
+        file_name = os.path.basename(p=file_path).split('.')[0]
+        new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{format}'  # noqa: E501
+        output_folder = os.path.join(output, new_filename.replace('.png', ''))
+        output_path = os.path.join(output_folder, new_filename)
+        create_folder_if_not_exists(folder_path=output_folder)
+    else:
+        output_path = os.path.join(output, new_filename)
+
+    if os.path.exists(path=output_path):
+        with pyczi.open_czi(filepath=file_path) as czidoc:
+            slice_img = czidoc.read(
+                roi=roi, plane={'C': 0}, pixel_type='Bgr24')
+        cells = contains_cells(image=slice_img, display=False)
+        print(f'{"contains cells" if cells else "does not contain cells"}')  # noqa: E501
+        if plot and cells:
+            plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
+        if cells:
+            print('saving image')
+            print(f'output_path: {output_path}')
+            cv2.imwrite(filename=output_path, img=slice_img)
+    else:
+        print(f'File {output_path} already exists')
 
 
 def create_folder_if_not_exists(folder_path: str) -> None:
