@@ -44,7 +44,7 @@ def slice_czi_image_info(file_path, output_dim=(1600, 1200), plot=False) -> dict
     Returns
     -------
     dict
-        Dictionary containing the slices information
+        Dictionary containing the slices infile_typeion
     """
     with pyczi.open_czi(filepath=file_path) as czidoc:
         # Dimensões da imagem e das cenas
@@ -75,14 +75,14 @@ def slice_czi_image_info(file_path, output_dim=(1600, 1200), plot=False) -> dict
     return slices_info
 
 
-def process_and_save_single_image_to_format(slices_info, file_path, slice_index, scene_index, output_dir, format, plot=True) -> None:  # noqa: E501
+def process_and_save_single_image_to_file_type(slices_info, file_path, slice_index, scene_index, output_dir, file_type, plot=True) -> None:  # noqa: E501
     """
     Process and save a single image
 
     Parameters
     ----------
     slices_info : dict
-        Dictionary containing the slices information
+        Dictionary containing the slices infile_typeion
     file_path : str
         Path to the CZI file
     slice_index : int
@@ -95,7 +95,7 @@ def process_and_save_single_image_to_format(slices_info, file_path, slice_index,
     current_slice = slices_info[f'scene_{scene_index}'][slice_index]
     roi = current_slice['roi']
     filename = os.path.basename(file_path).split('.')[0]
-    new_filename = f'{filename}_scene_{scene_index}_slice_{slice_index+1}.{format}'  # noqa: E501
+    new_filename = f'{filename}_scene_{scene_index}_slice_{slice_index+1}.{file_type}'  # noqa: E501
     with pyczi.open_czi(filepath=file_path) as czidoc:
         slice_img = czidoc.read(roi=roi, plane={'C': 0}, pixel_type='Bgr24')
     output_path = os.path.join(output_dir, new_filename)
@@ -178,7 +178,7 @@ def list_files_by_extension(directory: str, extension: str) -> tuple:
     return files_list, file_count
 
 
-def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output='images_output', plot=True, format='png', create=True) -> None:  # noqa: E501
+def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png', create=True) -> None:  # noqa: E501
     """
     Detect cells in a single slice
 
@@ -191,11 +191,11 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
     scene_index : int
         Index of the scene to be processed
     slices_info : dict
-        Dictionary containing the slices information
+        Dictionary containing the slices infile_typeion
     plot : bool
         Whether to plot the results
-    format : str
-        Output format (e.g., 'png', 'jpg')
+    file_type : str
+        Output file_type (e.g., 'png', 'jpg')
     create : bool
         Whether to create a separate folder for each czi file
 
@@ -206,11 +206,11 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
     """
     current_slice = slices_info[f'scene_{scene_index}'][slice_index]
     roi = current_slice['roi']
+    file_name = os.path.basename(p=file_path).split('.')[0]
+    new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{file_type}'  # noqa: E501
 
     if create:
-        file_name = os.path.basename(p=file_path).split('.')[0]
-        new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{format}'  # noqa: E501
-        output_folder = os.path.join(output, file_name.replace('.png', ''))
+        output_folder = os.path.join(output, file_name)
         output_path = os.path.join(output_folder, new_filename)
     else:
         output_path = os.path.join(output, new_filename)
@@ -224,7 +224,6 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
             display=False,
             threshold_ratio=0.01
         )
-        clear()
         print(f'slice {slice_index+1} - {"contains cells" if cells else "does not contain cells"}')  # noqa: E501
         if plot and cells:
             plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
@@ -234,10 +233,13 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
             print(f'output_folder: {output_folder}')
             create_folder_if_not_exists(folder_path=output_folder)
             cv2.imwrite(filename=output_path, img=slice_img)
-        if cells and not create:
+        if cells:
             print('saving image')
+            print(f'output_path: {output_path}')
+            if create:
+                print(f'output_folder: {output_folder}')
+                create_folder_if_not_exists(folder_path=output_folder)
             cv2.imwrite(filename=output_path, img=slice_img)
-
     else:
         print(f'File {output_path} already exists')
 
@@ -256,7 +258,7 @@ def create_folder_if_not_exists(folder_path: str) -> None:
         os.makedirs(name=folder_path)
 
 
-def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), format='png', create_folder=True) -> None:  # noqa: E501
+def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_type='png', create_folder=True) -> None:  # noqa: E501
     """
     Process all czi files in a folder.
 
@@ -264,7 +266,7 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), format=
     - folder_path (str): Path to the folder containing the czi files.
     - output_dir (str): Path to the output directory.
     - output_dim (tuple): Dimensions of the output images (width, height).
-    - format (str): Output format (e.g., 'png', 'jpg').
+    - file_type (str): Output file_type (e.g., 'png', 'jpg').
     - create_folder (bool): Whether to create a separate folder for each czi file.  # noqa: E501
     """
     czi_files, _ = list_files_by_extension(
@@ -293,7 +295,7 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), format=
                     scene_index=int(scene.split('_')[-1]),
                     slices_info=slices_info,
                     output=file_output_dir,
-                    format=format,
+                    file_type=file_type,
                     create=create
                 )
 
@@ -343,15 +345,15 @@ if __name__ == "__main__":
     # detect_cell_in_czi_slice(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info, plot=False)  # noqa: E501
     # plot_single_czi_image_with_legend(file_path=file_path, slice_index=0, scene_index=0, slices_info=slices_info)  # noqa: E501
 
-    # format = 'png'
+    # file_type = 'png'
 
-    # process_and_save_single_image_to_format(
+    # process_and_save_single_image_to_file_type(
     #     slices_info=slices_info,
     #     file_path=file_path,
     #     slice_index=0,
     #     scene_index=0,
     #     output_dir='images_output/2019_12_09__09_49__0001 (193)',
-    #     format=format,
+    #     file_type=file_type,
     #     plot=False
     #     )
     # plot_czi_slices(file_path=file_path, slices_info=slices_info, scene_index=0, start_index=0)  # noqa: E501
