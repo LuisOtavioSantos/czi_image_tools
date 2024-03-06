@@ -14,8 +14,7 @@ if __name__ == "__main__":
         folder_path=input_folder,
         output_dir=output_folder,
         output_dim=(1600, 1200),
-        format='png',
-        create_folder=True
+        file_type='png',
     )
     # print(f'file size (GB): {os.path.getsize(filename=file_path) / 1e9}')
     # max_slice_size = find_max_slice_size_to_memory(file_path=file_path)

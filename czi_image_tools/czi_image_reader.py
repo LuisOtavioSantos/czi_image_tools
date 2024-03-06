@@ -11,6 +11,7 @@ Open a czi file and read the slides.
 import glob
 import os
 import platform
+import sys
 
 import cv2
 import psutil
@@ -28,6 +29,26 @@ def clear() -> None:
         os.system(command="cls")
     else:
         os.system(command="clear")
+
+
+def is_notebook() -> bool:
+    """
+    Verifica se o código está sendo executado em um notebook
+
+    Returns
+    -------
+    bool
+        True se estiver em um notebook, False caso contrário
+    """
+    try:
+        from IPython import get_ipython
+        if get_ipython() is None:
+            return False
+        if 'IPKernelApp' not in get_ipython().config:
+            return False
+    except Exception:
+        return False
+    return True
 
 
 def slice_czi_image_info(file_path, output_dim=(1600, 1200), plot=False) -> dict:  # noqa: E501
@@ -178,7 +199,7 @@ def list_files_by_extension(directory: str, extension: str) -> tuple:
     return files_list, file_count
 
 
-def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png', create=True) -> None:  # noqa: E501
+def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png') -> None:  # noqa: E501
     """
     Detect cells in a single slice
 
@@ -209,11 +230,7 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
     file_name = os.path.basename(p=file_path).split('.')[0]
     new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{file_type}'  # noqa: E501
 
-    if create:
-        output_folder = os.path.join(output, file_name)
-        output_path = os.path.join(output_folder, new_filename)
-    else:
-        output_path = os.path.join(output, new_filename)
+    output_path = os.path.join(output, new_filename)
 
     if not os.path.exists(path=output_path):
         with pyczi.open_czi(filepath=file_path) as czidoc:
@@ -227,18 +244,9 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
         print(f'slice {slice_index+1} - {"contains cells" if cells else "does not contain cells"}')  # noqa: E501
         if plot and cells:
             plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
-        if cells and create:
-            print('saving image')
-            print(f'output_path: {output_path}')
-            print(f'output_folder: {output_folder}')
-            create_folder_if_not_exists(folder_path=output_folder)
-            cv2.imwrite(filename=output_path, img=slice_img)
         if cells:
             print('saving image')
             print(f'output_path: {output_path}')
-            if create:
-                print(f'output_folder: {output_folder}')
-                create_folder_if_not_exists(folder_path=output_folder)
             cv2.imwrite(filename=output_path, img=slice_img)
     else:
         print(f'File {output_path} already exists')
@@ -258,7 +266,7 @@ def create_folder_if_not_exists(folder_path: str) -> None:
         os.makedirs(name=folder_path)
 
 
-def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_type='png', create_folder=True) -> None:  # noqa: E501
+def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_type='png') -> None:  # noqa: E501
     """
     Process all czi files in a folder.
 
@@ -272,8 +280,8 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
     czi_files, _ = list_files_by_extension(
         directory=folder_path, extension='czi')
 
-    create = input('Create a folder for each patient? y/n: ')
-    create = string_input_to_boolean(string=create)
+    create_folder = input('Create a folder for each patient? y/n: ')
+    create_folder = string_input_to_boolean(string=create_folder)
 
     for czi_file in czi_files:
         print(f'Processing file: {czi_file}')
@@ -283,6 +291,8 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
         file_name = os.path.basename(czi_file).split('.')[0]
         file_output_dir = os.path.join(
             output_dir, file_name) if create_folder else output_dir
+
+        print(file_output_dir)
 
         if create_folder:
             os.makedirs(file_output_dir, exist_ok=True)
@@ -296,7 +306,6 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
                     slices_info=slices_info,
                     output=file_output_dir,
                     file_type=file_type,
-                    create=create
                 )
 
 
@@ -326,8 +335,8 @@ if __name__ == "__main__":
     # slices_info = slice_czi_image(file_path=file_path, output_dim=(4096, 4096))  # funciona  # noqa: E501
 
     # max = 152700
-    x_dim = 2000
-    y_dim = 2000
+    x_dim = 1600
+    y_dim = 1200
 
     print(f'x_dim: {x_dim}, y_dim: {y_dim} chosen manually')
 
@@ -337,7 +346,7 @@ if __name__ == "__main__":
     output = 'images_output'
     print(f'Output directory: {output}')
     print(f'{"Exists" if os.path.exists(path=output) else "Does not exist"}')
-    # quit()
+    quit()
     for sample_index in range(n_samples):
         detect_cell_in_czi_slice(file_path=file_path, slice_index=sample_index, scene_index=0, slices_info=slices_info, output=output, plot=True)  # noqa: E501
         if sample_index > 150:
