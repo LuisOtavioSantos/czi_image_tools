@@ -203,7 +203,7 @@ def list_files_with_czi_in_name(folder_path: str) -> list:
     return [os.path.join(folder_path, file) for file in os.listdir(path=folder_path) if '.czi' in file]  # noqa: E501
 
 
-def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png') -> None:  # noqa: E501
+def detect_cell_in_czi_slice(file_path, file_name, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png') -> None:  # noqa: E501
     """
     Detect cells in a single slice
 
@@ -231,7 +231,6 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
     """
     current_slice = slices_info[f'scene_{scene_index}'][slice_index]
     roi = current_slice['roi']
-    file_name = os.path.basename(p=file_path).split('.')[0]
     new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{file_type}'  # noqa: E501
 
     output_path = os.path.join(output, new_filename)
@@ -280,8 +279,8 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
         number = find_values_in_parentheses(os.path.basename(czi_file))[0]
         file_name = os.path.basename(czi_file).split('.')[0]
         file_output_dir = os.path.join(
-            output_dir, f'{file_name} ({number})') if create_folder else output_dir  # noqa: E501
-
+            output_dir, f'{file_name} ({number})') if create_folder else os.path.join(  # noqa: E501
+            output_dir, f'{file_name}')
         if create_folder:
             if not os.path.isdir(file_output_dir):
                 os.makedirs(file_output_dir, exist_ok=True)
@@ -290,6 +289,7 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
             for slice_index, slice_info in enumerate(iterable=slices):
                 detect_cell_in_czi_slice(
                     file_path=czi_file,
+                    file_name=file_name,
                     slice_index=slice_index,
                     scene_index=int(scene.split('_')[-1]),
                     slices_info=slices_info,
