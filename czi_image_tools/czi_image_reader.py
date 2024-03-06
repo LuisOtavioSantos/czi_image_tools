@@ -8,10 +8,9 @@ Open a czi file and read the slides.
 
 # from .plotting_utils import plot_czi_slices
 
-import glob
 import os
 import platform
-import sys
+import re
 
 import cv2
 import psutil
@@ -29,6 +28,20 @@ def clear() -> None:
         os.system(command="cls")
     else:
         os.system(command="clear")
+
+
+def find_values_in_parentheses(input_string: str) -> list:
+    """
+    Find all values within parentheses in the given string.
+
+    Parameters:
+    - input_string (str): The input string containing values within parentheses.  # noqa: E501
+
+    Returns:
+    - list: A list of values found within parentheses.
+    """
+    pattern = r'\((.*?)\)'
+    return re.findall(pattern, input_string)
 
 
 def is_notebook() -> bool:
@@ -177,26 +190,17 @@ def find_max_slice_size_to_memory(file_path, start_dim=(100, 100), step=100, max
     return max_slice_size
 
 
-def list_files_by_extension(directory: str, extension: str) -> tuple:
+def list_files_with_czi_in_name(folder_path: str) -> list:
     """
-    List all files with a given extension in a directory.
+    List all files with .czi in the name in a folder.
 
     Parameters:
-    - directory (str): The directory path.
-    - extension (str): The file extension to look for.
+    - folder_path (str): The path to the folder.
 
     Returns:
-    - tuple: A tuple containing the list of files and the count of files.
+    - list: List of files with .czi in the name.
     """
-    if not os.path.exists(path=directory):
-        raise ValueError(f"The directory {directory} does not exist.")
-
-    files_list = glob.glob(pathname=os.path.join(directory, "*." + extension))
-    files_list.sort()
-
-    file_count = len(files_list)
-
-    return files_list, file_count
+    return [os.path.join(folder_path, file) for file in os.listdir(path=folder_path) if '.czi' in file]  # noqa: E501
 
 
 def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png') -> None:  # noqa: E501
@@ -252,20 +256,6 @@ def detect_cell_in_czi_slice(file_path, slice_index, scene_index, slices_info, o
         print(f'File {output_path} already exists')
 
 
-def create_folder_if_not_exists(folder_path: str) -> None:
-    """
-    Create a folder if it does not exist.
-
-    Parameters:
-    - folder_path (str): The path to the folder.
-
-    Returns:
-    - None
-    """
-    if not os.path.exists(path=folder_path):
-        os.makedirs(name=folder_path)
-
-
 def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_type='png') -> None:  # noqa: E501
     """
     Process all czi files in a folder.
@@ -277,8 +267,7 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
     - file_type (str): Output file_type (e.g., 'png', 'jpg').
     - create_folder (bool): Whether to create a separate folder for each czi file.  # noqa: E501
     """
-    czi_files, _ = list_files_by_extension(
-        directory=folder_path, extension='czi')
+    czi_files = list_files_with_czi_in_name(folder_path=folder_path)
 
     create_folder = input('Create a folder for each patient? y/n: ')
     create_folder = string_input_to_boolean(string=create_folder)
@@ -288,14 +277,14 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
         slices_info = slice_czi_image_info(
             file_path=czi_file, output_dim=output_dim)
 
+        number = find_values_in_parentheses(os.path.basename(czi_file))[0]
         file_name = os.path.basename(czi_file).split('.')[0]
         file_output_dir = os.path.join(
-            output_dir, file_name) if create_folder else output_dir
-
-        print(file_output_dir)
+            output_dir, f'{file_name} ({number})') if create_folder else output_dir  # noqa: E501
 
         if create_folder:
-            os.makedirs(file_output_dir, exist_ok=True)
+            if not os.path.isdir(file_output_dir):
+                os.makedirs(file_output_dir, exist_ok=True)
 
         for scene, slices in slices_info.items():
             for slice_index, slice_info in enumerate(iterable=slices):
