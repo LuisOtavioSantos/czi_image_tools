@@ -133,8 +133,9 @@ def process_and_save_single_image_to_file_type(slices_info, file_path, slice_ind
     with pyczi.open_czi(filepath=file_path) as czidoc:
         slice_img = czidoc.read(roi=roi, plane={'C': 0}, pixel_type='Bgr24')
     output_path = os.path.join(output_dir, new_filename)
-    cv2.imwrite(filename=output_path, img=slice_img)
-    print(f'Processing: {new_filename}')
+    cv2.imwrite(filename=output_path,  # pylint: disable=no-member
+                img=slice_img)
+    # print(f'Processing: {new_filename}')
     if plot:
         plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
 
@@ -203,7 +204,23 @@ def list_files_with_czi_in_name(folder_path: str) -> list:
     return [os.path.join(folder_path, file) for file in os.listdir(path=folder_path) if '.czi' in file]  # noqa: E501
 
 
-def detect_cell_in_czi_slice(file_path, file_name, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png') -> None:  # noqa: E501
+def check_last_index_processed(output_dir: str) -> int:
+    """
+    Check the last index processed.
+
+    Parameters:
+    - output_dir (str): The path to the output directory.
+
+    Returns:
+    - int: The last index processed.
+
+    """
+    files = os.listdir(output_dir)
+    indices = [int(file.split('_')[-1].split('.')[0]) for file in files]
+    return max(indices)
+
+
+def detect_cell_in_czi_slice(file_path, file_name, slice_index, scene_index, slices_info, output='images_output', plot=True, file_type='png', threshold_ratio=0.1) -> None:  # noqa: E501
     """
     Detect cells in a single slice
 
@@ -226,36 +243,35 @@ def detect_cell_in_czi_slice(file_path, file_name, slice_index, scene_index, sli
 
     Returns
     -------
-    list
-        List containing the detected cells
+    None
     """
     current_slice = slices_info[f'scene_{scene_index}'][slice_index]
     roi = current_slice['roi']
     new_filename = f'{file_name}_scene_{scene_index}_slice_{slice_index+1}.{file_type}'  # noqa: E501
 
     output_path = os.path.join(output, new_filename)
-
-    if not os.path.exists(path=output_path):
+    if not os.path.isfile(path=output_path):
         with pyczi.open_czi(filepath=file_path) as czidoc:
             slice_img = czidoc.read(
                 roi=roi, plane={'C': 0}, pixel_type='Bgr24')
         cells = contains_cells(
             image=slice_img,
             display=False,
-            threshold_ratio=0.01
+            threshold_ratio=threshold_ratio
         )
-        print(f'slice {slice_index+1} - {"contains cells" if cells else "does not contain cells"}')  # noqa: E501
+        # print(f'slice {slice_index+1} - {"contains cells" if cells else "does not contain cells"}')  # noqa: E501
         if plot and cells:
             plot_single_czi_image_with_legend(file_path=file_path, slice_index=slice_index, scene_index=scene_index, slices_info=slices_info)  # noqa: E501
         if cells:
             print('saving image')
             print(f'output_path: {output_path}')
-            cv2.imwrite(filename=output_path, img=slice_img)
+            cv2.imwrite(filename=output_path,  # pylint: disable=no-member
+                        img=slice_img)
     else:
         print(f'File {output_path} already exists')
 
 
-def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_type='png') -> None:  # noqa: E501
+def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_type='png', thr=0.2) -> None:  # noqa: E501
     """
     Process all czi files in a folder.
 
@@ -294,7 +310,9 @@ def process_czi_folder(folder_path, output_dir, output_dim=(2000, 2000), file_ty
                     scene_index=int(scene.split('_')[-1]),
                     slices_info=slices_info,
                     output=file_output_dir,
+                    plot=False,
                     file_type=file_type,
+                    threshold_ratio=thr
                 )
 
 
