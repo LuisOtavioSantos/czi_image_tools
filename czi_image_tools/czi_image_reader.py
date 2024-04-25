@@ -228,18 +228,23 @@ def detect_cell_in_czi_slice(file_path, file_name, slice_index, scene_index, sli
     ----------
     file_path : str
         Path to the CZI file
+    file_name : str
+        Name of the file
     slice_index : int
         Index of the slice to be processed
     scene_index : int
         Index of the scene to be processed
     slices_info : dict
         Dictionary containing the slices infile_typeion
+    output : str
+        Output directory
     plot : bool
         Whether to plot the results
     file_type : str
-        Output file_type (e.g., 'png', 'jpg')
-    create : bool
-        Whether to create a separate folder for each czi file
+        Output file_type (e.g., 'png', 'jpg'
+    threshold_ratio : float
+        Threshold ratio for cell detection
+
 
     Returns
     -------
