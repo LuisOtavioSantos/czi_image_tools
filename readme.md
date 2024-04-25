@@ -12,12 +12,6 @@ pip install git+https://github.com/LuisOtavioSantos/czi_image_tools.git
 
 <h4> Create a virtual enviroment </h4>
 
-```sh
-python3 -m venv venv
-```
-
-<h4> Create a virtual enviroment </h4>
-
 #### Ubuntu
 ```sh
 python3 -m venv venv
