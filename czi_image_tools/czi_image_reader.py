@@ -81,7 +81,6 @@ def slice_czi_image_info(file_path, output_dim=(1600, 1200), plot=False) -> dict
         Dictionary containing the slices infile_typeion
     """
     with pyczi.open_czi(filepath=file_path) as czidoc:
-        # Dimensões da imagem e das cenas
         scenes_bounding_rectangle = czidoc.scenes_bounding_rectangle
 
         slices_info = {}
@@ -97,7 +96,6 @@ def slice_czi_image_info(file_path, output_dim=(1600, 1200), plot=False) -> dict
 
             for i in range(num_slices_x):
                 for j in range(num_slices_y):
-                    # Calculamos as coordenadas da ROI para cada slice
                     x = x_start + i * output_dim[0]
                     y = y_start + j * output_dim[1]
                     roi = (x, y, output_dim[0], output_dim[1])
@@ -171,14 +169,12 @@ def find_max_slice_size_to_memory(file_path, start_dim=(100, 100), step=100, max
         for scene, bounding_rect in scenes_bounding_rectangle.items():
             width, height = bounding_rect.w, bounding_rect.h
 
-            # Calculate the initial number of slices and memory usage
             num_slices_width = width // max_slice_size[0]
             num_slices_height = height // max_slice_size[1]
             num_slices = num_slices_width * num_slices_height
             mem_usage = num_slices * \
                 max_slice_size[0] * max_slice_size[1] * 3  # 3 bytes per pixel
 
-            # Adjust the slice size until the memory usage is within the limit
             while mem_usage > max_mem_bytes:
                 max_slice_size = (max_slice_size[0] + step, max_slice_size[1] + step)  # noqa: E501
                 num_slices_width = width // max_slice_size[0]

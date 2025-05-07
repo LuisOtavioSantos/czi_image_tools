@@ -50,7 +50,6 @@ def plot_czi_slices(file_path, slices_info, scene_index=0, start_index=0) -> Non
     None
     """
     with pyczi.open_czi(filepath=file_path) as czidoc:
-        # Calculamos o número de linhas necessário para plotar 9 imagens em 3 colunas  # noqa: E501
         num_rows = min(3, len(slices_info[f'scene_{scene_index}']) // 3 + (1 if len(slices_info[f'scene_{scene_index}']) % 3 > 0 else 0))  # noqa: E501
         fig, axes = plt.subplots(nrows=num_rows, ncols=3, figsize=(20, 15))
 
@@ -63,7 +62,6 @@ def plot_czi_slices(file_path, slices_info, scene_index=0, start_index=0) -> Non
                 roi = slice_info['roi']
                 ch0_slice = czidoc.read(roi=roi, plane={'C': 0}, pixel_type='Bgr24')  # noqa: E501
 
-                # Convertendo de BGR para RGB
                 # ch0_slice_rgb = ch0_slice[..., ::-1]
 
                 # axes[i].imshow(ch0_slice[..., 0])  # single channel

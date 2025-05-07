@@ -74,7 +74,6 @@ def find_intersection(line1: Tuple[float, float], line2: Tuple[float, float]) ->
     Returns:
     - The intersection point as a tuple (x, y) or None if there is no intersection.  # noqa: E501
     """
-    """Find the intersection point of two lines given in Hough space in polar coordinates."""  # noqa: E501
     rho1, theta1 = line1
     rho2, theta2 = line2
     A = np.array([
@@ -99,11 +98,9 @@ def detect_contours(image: np.ndarray) -> List[np.ndarray]:
     Returns:
     - A list of filtered contours based on area.
     """
-    # Finding contours
     contours, _ = cv2.findContours(
         image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Filtering contours based on area (you can adjust the threshold as needed)
     min_area = 1000
     filtered_contours = [
         cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
@@ -168,19 +165,16 @@ def enhance_lines(edges: np.ndarray, kernel_vertical: np.ndarray, kernel_horizon
     Returns:
     - Tuple containing enhanced vertical lines, horizontal lines, and combined lines.  # noqa: E501
     """
-    # Enhance vertical lines
     vertical_lines = cv2.dilate(
         src=edges, kernel=kernel_vertical, iterations=2)
     vertical_lines = cv2.erode(
         src=vertical_lines, kernel=kernel_vertical, iterations=1)
 
-    # Enhance horizontal lines
     horizontal_lines = cv2.dilate(
         src=edges, kernel=kernel_horizontal, iterations=2)
     horizontal_lines = cv2.erode(
         src=horizontal_lines, kernel=kernel_horizontal, iterations=1)
 
-    # Combine vertical and horizontal lines
     combined_lines = cv2.addWeighted(
         src1=vertical_lines, alpha=0.5, src2=horizontal_lines, beta=0.5, gamma=0.0)  # noqa: E501
 
@@ -262,7 +256,6 @@ def filter_close_lines(lines: np.ndarray, threshold: int = 20) -> Tuple[np.ndarr
     if lines is None:
         return [], 0
 
-    # Sort the lines by rho (distance from origin)
     sorted_lines = sorted(lines[:, 0], key=lambda x: x[0])
 
     filtered_lines = []
@@ -273,7 +266,6 @@ def filter_close_lines(lines: np.ndarray, threshold: int = 20) -> Tuple[np.ndarr
         rho_diff = abs(curr_line[0] - prev_line[0])
         theta_diff = abs(curr_line[1] - prev_line[1])
 
-        # If the line is far enough from the previous line in terms of rho and theta, add it to the list  # noqa: E501
         if rho_diff > threshold or theta_diff > np.pi / 180:
             filtered_lines.append(curr_line)
             prev_line = curr_line
@@ -321,17 +313,13 @@ def contains_cells(image: np.ndarray, display: bool = False, threshold_ratio=0.0
     Returns:
     - True if cells are present, False otherwise.
     """
-    # Convert BGR image to HSV
     hsv = cv2.cvtColor(src=image, code=cv2.COLOR_BGR2HSV)
 
-    # Define lower and upper bounds for the shades of purple to pink
     lower_bound = np.array(object=[125, 50, 50])
     upper_bound = np.array(object=[170, 255, 255])
 
-    # Create a mask
     mask = cv2.inRange(src=hsv, lowerb=lower_bound, upperb=upper_bound)
 
-    # Calculate the percentage of the masked area
     area = mask.shape[0] * mask.shape[1]
     masked_area = np.sum(a=mask == 255)
     ratio = masked_area / area
@@ -385,7 +373,6 @@ def most_repeated_count_and_segments(segmented_images: List[np.ndarray]) -> Tupl
     Returns:
     - Tuple containing the most common count and the list of segments corresponding to that count.  # noqa: E501
     """
-    # Initialize counts and segment lists
     rounded_shapes_count = 0
     colored_pixels_count = 0
     both_approaches_count = 0
@@ -413,13 +400,11 @@ def most_repeated_count_and_segments(segmented_images: List[np.ndarray]) -> Tupl
             both_approaches_count += 1
             both_approaches_segments.append(segment)
 
-    # Find the most common count among the methods
     counts = [rounded_shapes_count,
               colored_pixels_count, both_approaches_count]
     count_frequency = Counter(counts)
     most_common_count, _ = count_frequency.most_common(1)[0]
 
-    # Find the segments that passed the most common count method(s)
     most_common_method_segments = []
     if most_common_count == rounded_shapes_count:
         most_common_method_segments = rounded_shapes_segments
@@ -429,8 +414,6 @@ def most_repeated_count_and_segments(segmented_images: List[np.ndarray]) -> Tupl
         most_common_method_segments = both_approaches_segments
 
     return most_common_count, most_common_method_segments
-
-# First approach: Detect rounded shapes (cells) within each segment
 
 
 def detect_rounded_shapes(image: np.ndarray, display: bool = False) -> bool:
@@ -462,8 +445,6 @@ def detect_rounded_shapes(image: np.ndarray, display: bool = False) -> bool:
 
     return len(contours) > 0
 
-# Second approach: Detect pixels with color ranging from pink to dark purple
-
 
 def detect_colored_pixels(image: np.ndarray, display: bool = False) -> bool:
     """
@@ -478,7 +459,6 @@ def detect_colored_pixels(image: np.ndarray, display: bool = False) -> bool:
     """
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    # Define lower and upper bounds for shades of pink to dark purple
     lower_bound = np.array([125, 50, 50])
     upper_bound = np.array([170, 255, 255])
 
@@ -503,18 +483,14 @@ def proportional_crop(image: np.ndarray, crop_percentage: float = 0.84, offset_p
     Returns:
     - cropped_image: The cropped image.
     """
-    # Calculate the dimensions of the original image
     original_height, original_width, _ = image.shape
 
-    # Calculate the dimensions for the cropped image
     crop_height = int(original_height * crop_percentage)
     crop_width = int(original_width * crop_percentage)
 
-    # Calculate the starting point for the crop
     offset_height = int(original_height * offset_percentage)
     offset_width = int(original_width * offset_percentage)
 
-    # Perform the crop
     cropped_image = image[offset_height:offset_height +
                           crop_height, offset_width:offset_width + crop_width, :]  # noqa: E501
 
@@ -539,15 +515,12 @@ def segment_image(image_path, display=False):
         image_path, display=display)
     vertical_lines, horizontal_lines = filter_lines(lines)
 
-    # Sort lines by rho values
     vertical_lines = sorted(vertical_lines[:, 0], key=lambda x: x[0])
     horizontal_lines = sorted(horizontal_lines[:, 0], key=lambda x: x[0])
 
-    # Initialize vertical and horizontal cut points
     vertical_cuts = [0]
     horizontal_cuts = [0]
 
-    # Convert rho, theta to x, y and collect vertical and horizontal cut points
     h, w, _ = image.shape
     for rho, theta in vertical_lines:
         a = np.cos(theta)
@@ -560,11 +533,9 @@ def segment_image(image_path, display=False):
         y0 = b * rho
         horizontal_cuts.append(int(y0))
 
-    # Add the end of the image to the cut points
     vertical_cuts.append(w)
     horizontal_cuts.append(h)
 
-    # Create segments based on cut points
     for i in range(len(vertical_cuts) - 1):
         for j in range(len(horizontal_cuts) - 1):
             x1, x2 = vertical_cuts[i], vertical_cuts[i + 1]
